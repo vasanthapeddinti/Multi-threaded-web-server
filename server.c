@@ -7,7 +7,9 @@
 #include <arpa/inet.h>
 
 #define PORT         80
-#define BUFFERSIZ    1024
+#define BUFFERSIZ    2048
+
+void handle_client_request(int client_fd);
 
 int main()
 {
@@ -15,21 +17,7 @@ int main()
 
     int server_fd;
     int client_fd;
-    ssize_t valread;
-	ssize_t valwrite;
-	int sockn;
 	int addrlen = sizeof(address);
-
-	char buffer[BUFFERSIZ] = { 0 };
-	//char *msg = "Hello from server";
-
-	
-	char *msg = "HTTP/1.0 200 OK\r\n"
-	"Server: webserver-c\r\n"
-	"Content-type: test/html\r\n\r\n"
-	"<html>hello, world</html>\r\n";
-
-	//char *msg = "HTTP/1.1 200 OK\r\n\r\nRequested path: <the path>\r\n";
 
 	// Creating socket file descriptor
 	if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
@@ -60,35 +48,14 @@ int main()
 
 	while(1) {
 
-		// Create client address
-		struct sockaddr_in client_addr;
-		int client_addrlen = sizeof(client_addr);
-
 		// accept incoming connections
 		if ((client_fd = accept(server_fd, (struct sockaddr*)&address, (socklen_t*)&addrlen)) < 0) {
 			perror("accept");
 			exit(EXIT_FAILURE);
 		}
-		printf("client connection accepted successfully\n");
+		printf("\nclient connection accepted successfully\n");
 
-		if(
-			(sockn = getsockname(client_fd, (struct sockaddr*)&client_addr, (socklen_t *)&client_addrlen)) < 0) {
-			perror("error in getsockname");
-		}
-
-		// recieve the data from client
-		if ((valread = read(client_fd, buffer, 1024)) <= 0) {
-			perror("No data received\n");
-			exit(EXIT_FAILURE);
-		}
-		printf("%s:%u\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
-		printf("data recieved: %s\n\n", buffer);
-
-		// send the data to client
-		if (valwrite = send(client_fd, msg, strlen(msg), 0) < 0) {
-			perror("error sending data..");
-		}
-		printf("Data sent\n");
+		handle_client_request(client_fd);
 
 		// closing the connected socket
 		close(client_fd);
@@ -103,4 +70,60 @@ int main()
 	return 0;
 }
 
+void handle_client_request(int client_fd) {
 
+	ssize_t valread;
+	ssize_t valwrite;
+	char buffer[BUFFERSIZ] = { 0 };
+	char filebuffer[BUFFERSIZ] = { 0 };
+	char method[20];
+	char page[20];
+	char protocol[20];
+
+
+	char *header = "HTTP/1.0 200 OK\r\n"
+	"Server: webserver\r\n"
+	"Content-type: text/html\r\n\r\n";
+
+	// recieve the data from client
+	if ((valread = recv(client_fd, buffer, 1024, 0)) <= 0) {
+		perror("No data received\n");
+		exit(EXIT_FAILURE);
+	}
+	printf("\ndata recieved: \n%s\n\n", buffer);
+
+	sscanf(buffer, "%s %s %s", method, page, protocol);
+	printf("page trying to reach is %s", page);
+
+
+
+
+
+	// send the data to client
+	if (strcmp(page, "/index.html") == 0 || strcmp(page, "/") == 0) {
+		
+	    FILE* fptr;
+		size_t n;
+		fptr = fopen("index.html", "r");
+
+	
+		if (NULL == fptr) {
+			printf("file can't be opened \n");
+		}
+
+		if (valwrite = send(client_fd, header, strlen(header), 0) < 0) {
+			perror("error sending headers..");
+		}
+		while ((n = fread(filebuffer, 1, sizeof(BUFFERSIZ), fptr)) > 0) {
+			if (valwrite = send(client_fd, filebuffer, strlen(filebuffer), 0) < 0) {
+				printf("error sending data..");
+			}
+		}
+
+		fclose(fptr);
+
+		printf("\n\nData sent\n");
+	}
+
+	return;
+}
