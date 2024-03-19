@@ -11,7 +11,7 @@ docker run -d -p 80:80 -it webserver
 docker ps
 
 # Check the docker logs
-docker logs -f <container-id>
+docker logs -f `<container-id>`
 
 # Send client requests
 curl --verbose http://localhost/index.html
