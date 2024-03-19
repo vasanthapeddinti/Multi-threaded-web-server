@@ -81,7 +81,7 @@ void handle_client_request(int client_fd) {
 	char protocol[20];
 
 
-	char *header = "HTTP/1.0 200 OK\r\n"
+	const char *header = "HTTP/1.0 200 OK\r\n"
 	"Server: webserver\r\n"
 	"Content-type: text/html\r\n\r\n";
 
@@ -123,6 +123,16 @@ void handle_client_request(int client_fd) {
 		fclose(fptr);
 
 		printf("\n\nData sent\n");
+	} else {
+
+		const char *msg = "HTTP/1.1 404 Not Found\r\n";
+
+		// send the data to client
+		if (valwrite = send(client_fd, msg, strlen(msg), 0) < 0) {
+			perror("error sending data..");
+		}
+
+		printf("\nClient tried to reach undefined or restricted page...\n");
 	}
 
 	return;
